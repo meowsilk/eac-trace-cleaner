@@ -1,6 +1,4 @@
-# Local cleaner outputs
 logs/
 *.log
 
-# Stray session artifacts (e.g. captured console output)
 Textdokument*.txt
