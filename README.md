@@ -134,10 +134,9 @@ Two Windows mechanisms need a reboot to actually act:
 - **`PendingFileRenameOperations`** — files locked at runtime (`Amcache.hve`, `swapfile.sys`) are scheduled for `MoveFileEx(..., MOVEFILE_DELAY_UNTIL_REBOOT)`. `smss.exe` processes the list before any service starts.
 - **`ClearPageFileAtShutdown`** — wiping the pagefile happens at the *next shutdown*, not when the registry value is set.
 
-Phase 17 reboots automatically unless `-SkipReboot` or `-DryRun`. If
-you skip it, you **must** reboot manually — otherwise Shimcache,
-`Amcache.hve`, the pagefile, and the hibernation file all stay in
-their pre-run state.
+Phase 17 reboots automatically at the end. If you skip the reboot,
+Shimcache, `Amcache.hve`, the pagefile, and the hibernation file all
+stay in their pre-run state.
 
 ### UAC flow
 
@@ -145,56 +144,6 @@ their pre-run state.
 elevated, it `Start-Process -Verb RunAs` to UAC-prompt and re-enters
 itself. The elevated instance `pushd`s the script directory and runs
 `EacCleaner.ps1` with `-NoProfile -ExecutionPolicy Bypass`.
-
-### Dry-run
-
-`-DryRun` logs every operation to `%TEMP%\EacCleaner_<timestamp>.log`
-without modifying anything. Run this first.
-
-## Switches
-
-| Switch | Effect |
-|---|---|
-| `-SkipConfirm`       | Skip the "type CLEAN" prompt. |
-| `-SkipReboot`        | Do not auto-reboot. You **must** reboot manually afterward. |
-| `-ClearTpm`          | Delete `EacQuoteKey` + `AttestationKey` from TPM registry. **Wipes BitLocker recovery sealed to this TPM.** Does not reprovision the hardware TPM — use `tpm.msc` → Clear TPM for that. |
-| `-SkipCredentials`   | Leave Credential Manager + DPAPI + LSA alone. Keeps saved Wi-Fi, VPN, browser creds. |
-| `-SkipBrowsers`      | Leave Chrome/Edge/Brave/Opera/Firefox alone. |
-| `-WholesalePrefetch` | Wipe every `.pf` in `C:\Windows\Prefetch`. |
-| `-NukeBYOVD`         | Also purge known vulnerable-driver remnants from DriverStore + Services + system32\drivers. Use only if you ran a driver mapper on this box. |
-| `-DryRun`            | Log what would happen, change nothing. **Run this first.** |
-
-## What this cleaner cannot do
-
-User-mode only. Three things are out of scope by design:
-
-- **Kernel in-memory state.** `nt!PiDDBCacheTable`, `nt!MmUnloadedDrivers`, `ci!g_KernelHashBucketList`, ETW ring buffers. These live in kernel memory and cannot be touched from user mode. The reboot in Phase 17 clears most of this volatile state naturally.
-- **Object Manager state.** Service pipe handles, named events (`\BaseNamedObjects\...`). Kernel objects; they die when the service stops (Phase 2) and the system reboots (Phase 17).
-- **NTFS low-level artifacts.** `$MFT` slack, `$LogFile`, `$INDX` records. Reformat is the only clean here. USN (`$UsnJrnl`) and TxF (`$RmMetadata`) *are* cleared in Phase 14.
-
-## Troubleshooting
-
-**"The script must run as Administrator."**
-Use `Run-EacCleaner.bat` — it UAC-prompts. If you run `EacCleaner.ps1`
-directly, elevate your shell first.
-
-**`Amcache.hve` stayed on disk after the script.**
-It's locked at runtime. Check
-`HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations` —
-the script scheduled it. Reboot and it will delete.
-
-**`Clear-RecycleBin` failed.**
-Expected on some SKUs. The script falls back to deleting
-`$Recycle.Bin` on each drive directly.
-
-**Event log channels I don't care about keep failing to clear.**
-Normal — some channels are `-Enabled $false` or owned by sessions
-the script doesn't have rights to. `wevtutil cl` tries them all and
-skips the ones that refuse. The ones that matter (System,
-Application, Security, PnP, TaskScheduler, CodeIntegrity) clear.
-
-**BitLocker recovery screen on reboot.**
-You passed `-ClearTpm`. Enter your recovery key.
 
 ## Requirements
 
@@ -205,10 +154,7 @@ You passed `-ClearTpm`. Enter your recovery key.
 ## Running
 
 Double-click `Run-EacCleaner.bat`, accept UAC, type `CLEAN` when
-prompted. Reboot is automatic after the last phase unless you pass
-`-SkipReboot`.
-
-Run `Run-EacCleaner.bat -DryRun` first to see the plan.
+prompted. Reboot is automatic after the last phase.
 
 ## Notice
 

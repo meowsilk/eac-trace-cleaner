@@ -404,9 +404,9 @@ $gameProcs = @(
     'EasyAntiCheat_EOSSys',
     'CrashReportClient',          # UE5 crash handler - holds FortniteGame\Saved\Crashes
     'CrashReportClientEditor',
-    'UnrealCEFSubProcess',        # UE web/CEF subprocess for login UI
-    'EosOverlayRenderer-Win64-Shipping',  # EOS social overlay
-    'EOSSDK-Win64-Shipping'        # EOS SDK helper
+    'UnrealCEFSubProcess',
+    'EosOverlayRenderer-Win64-Shipping',
+    'EOSSDK-Win64-Shipping'
 )
 foreach ($n in $gameProcs) { Stop-ProcessByName $n }
 
@@ -727,7 +727,6 @@ foreach ($bamBase in @(
     }
 }
 
-# MUICache
 $muiCache = 'HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache'
 Remove-RegKeySafe $muiCache
 
@@ -772,7 +771,6 @@ Remove-RegKeySafe 'HKCU:\Software\Microsoft\Windows\ShellNoRoam\BagMRU'
 Remove-RegKeySafe 'HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\Bags'
 Remove-RegKeySafe 'HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\BagMRU'
 
-# TypedPaths + OpenSaveMRU + RecentDocs
 Remove-RegKeySafe 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths'
 Remove-RegKeySafe 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSavePidlMRU'
 Remove-RegKeySafe 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedPidlMRU'
@@ -809,7 +807,6 @@ foreach ($p in $amcachePaths) {
 # SRUM database (Services DPS was stopped in phase 2)
 Remove-PathSafe 'C:\Windows\System32\sru\SRUDB.dat'
 
-# Jump Lists (per-user)
 Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     $jl1 = Join-Path $_.FullName 'AppData\Roaming\Microsoft\Windows\Recent\AutomaticDestinations'
     $jl2 = Join-Path $_.FullName 'AppData\Roaming\Microsoft\Windows\Recent\CustomDestinations'
@@ -819,7 +816,6 @@ Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Obje
     Remove-PathSafe $rec -ContentsOnly
 }
 
-# Windows Push Notifications db
 Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     $wpn = Join-Path $_.FullName 'AppData\Local\Microsoft\Windows\Notifications'
     Remove-PathSafe $wpn -ContentsOnly
@@ -837,7 +833,6 @@ Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Obje
     }
 }
 
-# Thumbcache + IconCache
 Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     $exp = Join-Path $_.FullName 'AppData\Local\Microsoft\Windows\Explorer'
     if (Test-Path -LiteralPath $exp) {
@@ -849,7 +844,6 @@ Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Obje
     Remove-PathSafe (Join-Path $_.FullName 'AppData\Local\IconCache.db')
 }
 
-# WER queue + archive
 Remove-PathSafe 'C:\ProgramData\Microsoft\Windows\WER\ReportQueue'    -ContentsOnly
 Remove-PathSafe 'C:\ProgramData\Microsoft\Windows\WER\ReportArchive'  -ContentsOnly
 Remove-PathSafe 'C:\ProgramData\Microsoft\Windows\WER\Temp'           -ContentsOnly
@@ -857,7 +851,6 @@ Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Obje
     Remove-PathSafe (Join-Path $_.FullName 'AppData\Local\Microsoft\Windows\WER') -ContentsOnly
 }
 
-# Memory dumps
 Remove-PathSafe 'C:\Windows\Minidump' -ContentsOnly
 Remove-PathSafe 'C:\Windows\Memory.dmp'
 Remove-PathSafe 'C:\Windows\LiveKernelReports' -ContentsOnly
@@ -874,10 +867,8 @@ Get-ChildItem 'C:\Windows\System32\config\TxR' -File -ErrorAction SilentlyContin
     Where-Object { $_.Extension -in '.regtrans-ms','.blf' } |
     ForEach-Object { Remove-PathSafe $_.FullName }
 
-# Windows Search index
 Remove-PathSafe 'C:\ProgramData\Microsoft\Search\Data\Applications\Windows' -ContentsOnly
 
-# Panther / CBS / Setup logs
 Remove-PathSafe 'C:\Windows\Panther'                 -ContentsOnly
 Remove-PathSafe 'C:\Windows\Logs\CBS'                -ContentsOnly
 Remove-PathSafe 'C:\Windows\Logs\DISM'               -ContentsOnly
@@ -961,7 +952,6 @@ if ($NukeBYOVD) {
         )) {
             if (Test-Path $svcKey) { Remove-RegKeySafe $svcKey }
         }
-        # On-disk .sys
         $sysFile = "C:\Windows\System32\drivers\$n.sys"
         if (Test-Path $sysFile) { Remove-PathSafe $sysFile }
     }
@@ -1017,7 +1007,6 @@ Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Obje
     }
 }
 
-# Temp directories for every user
 Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     Remove-PathSafe (Join-Path $_.FullName 'AppData\Local\Temp') -ContentsOnly
 }
@@ -1100,7 +1089,6 @@ if (-not $SkipBrowsers) {
                     }
                 }
         }
-        # Firefox profiles
         $ff = Join-Path $_.FullName 'AppData\Roaming\Mozilla\Firefox\Profiles'
         if (Test-Path -LiteralPath $ff) {
             Get-ChildItem -LiteralPath $ff -Directory -ErrorAction SilentlyContinue | ForEach-Object {
@@ -1142,16 +1130,13 @@ if (-not $DryRun) {
     Add-Content $script:LogFile ($wsOut -join "`r`n")
     Write-Ok "netsh winsock reset"
 
-    # TCP/IP stack
     $ipOut = & netsh.exe int ip reset 2>&1
     Add-Content $script:LogFile ($ipOut -join "`r`n")
     Write-Ok "netsh int ip reset"
 
-    # ARP cache
     & arp.exe -d * 2>&1 | Out-Null
     Write-Ok "arp -d * (flushed ARP cache)"
 
-    # NetBIOS cache
     & nbtstat.exe -R 2>&1 | Out-Null
     Write-Ok "nbtstat -R (reloaded NetBIOS name cache)"
     & nbtstat.exe -RR 2>&1 | Out-Null
@@ -1170,7 +1155,6 @@ if (-not $DryRun) {
         Write-Miss "no Wi-Fi profiles to delete"
     }
 
-    # DHCP lease release+renew
     & ipconfig.exe /release 2>&1 | Out-Null
     & ipconfig.exe /renew   2>&1 | Out-Null
     Write-Ok "ipconfig /release + /renew (new DHCP lease)"
@@ -1324,8 +1308,6 @@ if ($script:Counts.Err -gt 0) {
     # No failures -- remove the empty failures log so the folder stays tidy
     if (Test-Path -LiteralPath $script:FailLogFile) {
         Remove-Item -LiteralPath $script:FailLogFile -Force -ErrorAction SilentlyContinue
-    } elseif (-not (Test-Path -LiteralPath $script:FailLogFile)) {
-        # never written -- nothing to clean up
     }
 }
 
